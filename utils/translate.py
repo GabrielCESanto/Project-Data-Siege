@@ -1,3 +1,4 @@
+import unicodedata
 class translate_names:
     def translate_map_names(self) -> dict: 
         return {
@@ -11,3 +12,10 @@ class translate_names:
             'nighthaven_labs' : 'laboratorios nighthaven',
             'bank' : 'banco'
         }
+
+    def remove_acentos(self, string) -> str:
+        string = unicodedata.normalize("NFD", string)
+        string = string.encode('ascii', 'ignore')
+        formatted_string = string.decode('utf-8')
+
+        return formatted_string
