@@ -1,31 +1,36 @@
-import sys
-sys.path.append('/home/thiago/Projetos/dataSiege/Project-Data-Siege')
 from loguru import logger
-import utils.request
 from database.insertData import insertData
-from app_base import app_base
+from main.app_base import app_base
 
 class app(app_base):
-    def get_matches_info(self):
-        insersor = insertData()
-        results = {
-            'sumary' : {},
-            'match0' : {},
-            'match1' : {},
-            'match2' : {}
-        }
-        requests_maker=  utils.request.request()
-        matches_info = requests_maker.request_info(5850)
+    def get_matches_info(self, matches_info={}, match_url = ''):
+        try:
+            self.qtd_rounds = 0
+            insersor = insertData()
+            results = {
+                'sumary' : {},
+                'match0' : {},
+                'match1' : {},
+                'match2' : {}
+            }
+            results.update(self.set_sumary_info(results, matches_info))
+            results.update(self.set_all_info_each_map(results, matches_info))
+            results['sumary']['qtd_rounds'] = self.qtd_rounds
+            results['sumary']['url'] = match_url
+            insersor.insert_data_ban_operator(results)
 
-        results.update(self.set_sumary_info(results, matches_info))
-        results.update(self.set_all_info_each_map(results, matches_info))
-        results['sumary']['qtd_rounds'] = self.qtd_rounds
+            if results['sumary']['championship']['matchFormat'] == 1:
+                id_last_match = insersor.insert_data_match_md_1(results)
+            else:
+                id_last_match = insersor.insert_data_match_md_x(results)
 
-        insersor.insert_data_ban_operator(results)
-        id_last_match = insersor.insert_data_match(results)
-        insersor.insert_data_team_match(results, id_last_match)
-        insersor.insert_data_player_match(results, id_last_match)
+            insersor.insert_data_team_match(results, id_last_match)
+            insersor.insert_data_player_match(results, id_last_match)
+            self.create_matches_cache(match_url)
 
+        except Exception as e:
+            logger.error('ERROR')
+            logger.error(e)
 
     def set_sumary_info(self, results={}, match={}):
         results['sumary']['championship'] = self.get_championship_info(match)
@@ -108,7 +113,9 @@ class app(app_base):
                             'HS': match['match']['games'][game]['teams'][info_match]['players'][player_info]['stats']['headshots']['count'],
                             'open_deaths': match['match']['games'][game]['teams'][info_match]['players'][player_info]['stats']['openingDeaths']['count'],
                             'open_kill': match['match']['games'][game]['teams'][info_match]['players'][player_info]['stats']['openingKills']['count'],
-                            'clutch': match['match']['games'][game]['teams'][info_match]['players'][player_info]['stats']['clutch']['count']
+                            'clutch': match['match']['games'][game]['teams'][info_match]['players'][player_info]['stats']['clutch']['count'],
+                            'kost': match['match']['games'][game]['teams'][info_match]['players'][player_info]['stats']['kost'],
+                            'eps' : match['match']['games'][game]['teams'][info_match]['players'][player_info]['stats']['eps']
                     }
                 }
             )
@@ -129,5 +136,12 @@ class app(app_base):
 
         return results
 
+    def create_matches_cache(self, match= ''):
+        try:
+            with open('/home/thiago/Projetos/dataSiege/Project-Data-Siege/main/cache_matches.txt', 'a') as file:
+                file.write(f"{match}\n")
+        except Exception as e:
+            logger.error('ERROR')
+            logger.error(e)
 if __name__ == '__main__': 
     app().get_matches_info()
