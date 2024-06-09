@@ -14,15 +14,19 @@ class app(app_base):
                 'match2' : {}
             }
             results.update(self.set_sumary_info(results, matches_info))
+            logger.critical(match_url)
             results.update(self.set_all_info_each_map(results, matches_info))
             results['sumary']['qtd_rounds'] = self.qtd_rounds
             results['sumary']['url'] = match_url
+
             insersor.insert_data_ban_operator(results)
 
             if results['sumary']['championship']['matchFormat'] == 1:
                 id_last_match = insersor.insert_data_match_md_1(results)
-            else:
-                id_last_match = insersor.insert_data_match_md_x(results)
+            if results['sumary']['championship']['matchFormat'] == 3:
+                id_last_match = insersor.insert_data_match_md_3(results)
+            if results['sumary']['championship']['matchFormat'] == 5:
+                id_last_match = insersor.insert_data_match_md_5(results)
 
             insersor.insert_data_team_match(results, id_last_match)
             insersor.insert_data_player_match(results, id_last_match)
@@ -72,6 +76,11 @@ class app(app_base):
     def set_all_info_each_map(self, results={}, match={}):
         for game in range(results['sumary']['championship']['matchFormat']):
             match_happened = len(match['match']['games'][game]['rounds']) > 1
+
+            if f'match{game}' not in results:
+                results.update({
+                    f'match{game}':{}
+                })
 
             results[f'match{game}'].update({
                 'map' : match['match']['games'][game]['map']['name'],

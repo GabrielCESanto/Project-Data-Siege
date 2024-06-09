@@ -25,14 +25,16 @@ class insertData:
                             id_team,
                             ban1,
                             ban2,
-                            date_match)
+                            date_match,
+                            id_url)
                             VALUES('''
 
                             sql_code += f'''
                                 (SELECT id_team FROM team WHERE name_team = '{json['sumary']['team_info'][time]['name']}'),
                                 (SELECT id_operator FROM operator WHERE name_operator = '{json[f'match{qtd_matches}'][team_name]['team_info']['banAtk']}'),
                                 (SELECT id_operator FROM operator WHERE name_operator = '{json[f'match{qtd_matches}'][team_name]['team_info']['banDef']}'),
-                                '{json['sumary']['date']}'
+                                '{json['sumary']['date']}',
+                                {json['sumary']['url'][-4:]}
                             )
                             '''
                             logger.info(sql_code)
@@ -52,7 +54,7 @@ class insertData:
                 self.connector.getInstance()
                 self.insert_data_ban_operator(json, tentativas)
 
-    def insert_data_match_md_x(self, json={}, tentativas=0):
+    def insert_data_match_md_3(self, json={}, tentativas=0):
         try:
             sql_code_to_retrieve_last_id = 'SELECT TOP(1) id_match from matchs ORDER BY id_match DESC'
 
@@ -117,7 +119,83 @@ class insertData:
                 tentativas += 1
                 self.cursor.close()
                 self.connector.getInstance()
-                self.insert_data_match_md_x(json, tentativas)
+                self.insert_data_match_md_3(json, tentativas)
+
+    def insert_data_match_md_5(self, json={}, tentativas=0):
+        try:
+            sql_code_to_retrieve_last_id = 'SELECT TOP(1) id_match from matchs ORDER BY id_match DESC'
+
+            sql_code = f'''
+                INSERT INTO matchs (
+                    id_championship,
+                    date_match,
+                    md{json['sumary']['championship']['matchFormat']},
+                    id_map1,
+                    id_map2,
+                    id_map3,
+                    id_map4,
+                    id_map5,
+                    '''
+            qtd_total_bans = len(self.id_bans[json['sumary']['team_info']['team0']['name']]) * 2
+
+            for id_ban in range(1, (qtd_total_bans + 1)):
+                if id_ban <=2 :
+                    sql_code += f'''
+                        id_ban{id_ban},
+                    '''
+                if id_ban >2 and id_ban<=6:
+                    sql_code+= f'''
+                        id_ban{id_ban}_md3,
+                    '''
+                if id_ban > 6:
+                    sql_code += f'''
+                        id_ban{id_ban}_md5,
+                    '''
+
+            sql_code += f'''
+                    id_team1,
+                    id_team2,
+                    qtd_rounds,
+                    url_match)
+                VALUES (
+                    (SELECT id_championship FROM championships where name_championship = '{json['sumary']['championship']['competition']}'),
+                    '{json['sumary']['date']}',
+                    1,
+                '''
+
+            for qtd_matches in range(len(json.keys()) - 1):
+                sql_code+= f'''
+                    (SELECT id_map FROM maps WHERE name_map = '{json[f'match{qtd_matches}']['map']}'),
+                '''
+
+            for team in json['sumary']['team_info'].keys():
+                for ban_info in self.id_bans[json['sumary']['team_info'][team]['name']]:
+                    sql_code += f'''
+                    {self.id_bans[json['sumary']['team_info'][team]['name']][ban_info]}, 
+                    '''
+
+            for time in json['sumary']['team_info'].keys():
+                sql_code+= f'''
+                    (SELECT id_team FROM team WHERE name_team = '{json['sumary']['team_info'][time]['name']}'),
+                '''
+
+            sql_code += f"{json['sumary']['qtd_rounds']},"
+            sql_code += f"'{json['sumary']['url']}'"
+            sql_code += ')'
+            logger.info(sql_code)
+
+            self.cursor.execute(sql_code)
+            self.cursor.commit()
+            self.cursor.execute(sql_code_to_retrieve_last_id)
+            return self.cursor.fetchone()[0]
+        except Exception as e:
+            logger.debug("ERROR")
+            logger.debug(e)
+            if tentativas < 1 :
+                tentativas += 1
+                self.cursor.close()
+                self.connector.getInstance()
+                self.insert_data_match_md_5(json, tentativas)
 
     def insert_data_match_md_1(self, json={}, tentativas = 0):
         try:

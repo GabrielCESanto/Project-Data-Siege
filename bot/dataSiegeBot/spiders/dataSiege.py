@@ -11,7 +11,7 @@ from database.getData import getData
 class DatasiegeSpider(scrapy.Spider):
     name = 'dataSiege'
     allowed_domains = ['ubisoft.com']
-    start_urls = getData().get_start_urls()
+    start_urls = getData().prepare_start_urls()
     id_json = ''
 
     def parse(self, response):
@@ -20,9 +20,15 @@ class DatasiegeSpider(scrapy.Spider):
             info_insertion = app()
             cache = self.read_matches_cache()
 
-            all_matches_link  = response.css('.matches-list_match__G2PUt > a::attr(href)').getall()
+            all_matches_link = response.css('.matches-list_match__G2PUt > a::attr(href)').getall()
+
             if not all_matches_link : 
-                all_matches_link  = response.css('.brackets_matchup__F8vxe::attr(href)').getall()
+                all_matches_link = response.css('.brackets_matchup__F8vxe::attr(href)').getall()
+
+            if not all_matches_link :
+                all_matches_link = response.css('.swiss-format-team_swissFormatTeam__0YVTv::attr(href)').getall()
+
+            all_matches_link = list(set(all_matches_link))
 
             id = re.search('"buildId":"(\w+)"', response.text)
             self.id_json = re.split('"', id.group()) [-2]
